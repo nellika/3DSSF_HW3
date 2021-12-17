@@ -54,7 +54,7 @@ void kdtree_demo(const size_t nSamples, const size_t dim) {
 
   // Dimensionality set at compile-time: Explicit selection of the distance
   // metric: L2
-  typedef KDTreeEigenMatrixAdaptor<Eigen::Matrix<num_t, Dynamic, Dynamic>, -1, 
+  typedef KDTreeEigenMatrixAdaptor<Eigen::Matrix<num_t, Dynamic, Dynamic>, -1,
                                    nanoflann::metric_L2>
       my_kd_tree_t;
 
@@ -73,7 +73,7 @@ void kdtree_demo(const size_t nSamples, const size_t dim) {
   mat_index.index->buildIndex();
 
   // do a knn search
-  const size_t num_results = 3;
+  const size_t num_results = 1;
   vector<size_t> ret_indexes(num_results);
   vector<num_t> out_dists_sqr(num_results);
 
@@ -89,10 +89,49 @@ void kdtree_demo(const size_t nSamples, const size_t dim) {
               << " out_dist_sqr=" << out_dists_sqr[i] << endl;
 }
 
+void cricle_demo() {
+  using PointCloudType = Eigen::Matrix<float, Eigen::Dynamic, 2>;
+
+  PointCloudType pc;
+  pc.resize(10, Eigen::NoChange);  // nochange will result in 2
+
+  const double r = 1.0;
+
+  for (int i = 0; i < pc.rows(); i++) {
+    double phi = static_cast<float>(i) / pc.rows() * 2 * 3.14159265;
+    pc.row(i) = r * Eigen::Vector2f(std::cos(phi), std::sin(phi));
+  }
+
+  // generating kdtree
+  typedef KDTreeEigenMatrixAdaptor<
+      PointCloudType, PointCloudType::ColsAtCompileTime, nanoflann::metric_L2>
+      my_kd_tree_t;
+
+  my_kd_tree_t my_tree(PointCloudType::ColsAtCompileTime, std::cref(pc), 10);
+  my_tree.index->buildIndex();
+
+  
+  nanoflann::KNNResultSet<float> result(1);
+  size_t closest_index;
+  float closest_sqdistance;
+  
+  // sample points from the line
+  for (int i = 0; i < 5; i++){
+    Eigen::Vector2f p(1, (static_cast<float>(i)/4) * 2 -1);
+    result.init(&closest_index, &closest_sqdistance);
+
+    my_tree.index->findNeighbors(result, p.data(), nanoflann::SearchParams());
+    std::cout << closest_index << std::endl;
+  }
+  
+  // for each, perform NN-search
+}
+
 int main(int argc, char **argv) {
   // Randomize Seed
-  srand(static_cast<unsigned int>(time(nullptr)));
-  kdtree_demo<float>(1000 /* samples */, SAMPLES_DIM /* dim */);
+  // srand(static_cast<unsigned int>(time(nullptr)));
+  // kdtree_demo<float>(1000 /* samples */, SAMPLES_DIM /* dim */);
 
+  cricle_demo();
   return 0;
 }
